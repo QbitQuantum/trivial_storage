@@ -98,11 +98,12 @@ constexpr bool operator!=(const pod_allocator<T>& lhs, const pod_allocator<U>& r
 
 // ==============================
 // 4. dynamic_pod_array — динамический массив с аллокатором
-template <typename T>
+template <typename T, typename Allocator = std::allocator<T>>
 class dynamic_pod_array {
+private:
     T* data_;
     std::size_t size_;
-    pod_allocator<T> alloc_;
+    Allocator alloc_; // Используем пользовательский аллокатор
 
 public:
     explicit dynamic_pod_array(std::size_t n)
@@ -111,6 +112,7 @@ public:
     }
 
     ~dynamic_pod_array() {
+        // Не вызываем деструкторы (POD)
         alloc_.deallocate(data_, size_);
     }
 
@@ -128,8 +130,11 @@ public:
     std::size_t size() const noexcept {
         return size_;
     }
-};
 
+    const Allocator& get_allocator() const noexcept {
+        return alloc_;
+    }
+};
 // ==============================
 // 5. Пример использования
 
@@ -171,17 +176,31 @@ int main() {
         }
     }
 
-    // Используем dynamic_pod_array
+    // Используем std::allocator через dynamic_pod_array
     {
-        dynamic_pod_array<Point> points(5);
-
-        for (size_t i = 0; i < points.size(); ++i) {
-            points[i] = Point{ static_cast<int>(i), static_cast<int>(i * 2) };
+        dynamic_pod_array<int> arr(4);
+        for (size_t i = 0; i < arr.size(); ++i) {
+            arr[i] = static_cast<int>(i * 10);
         }
 
-        for (size_t i = 0; i < points.size(); ++i) {
-            std::cout << "dynamic_pod_array[" << i << "] = {"
-                << points[i].x << ", " << points[i].y << "}\n";
+        std::cout << "Using std::allocator:\n";
+        for (size_t i = 0; i < arr.size(); ++i) {
+            std::cout << "arr[" << i << "] = " << arr[i] << '\n';
+        }
+    }
+
+    // Используем pod_allocator
+    {
+        dynamic_pod_array<Point, pod_allocator<Point>> arr(3);
+
+        arr[0] = { 1, 2 };
+        arr[1] = { 3, 4 };
+        arr[2] = { 5, 6 };
+
+        std::cout << "Using pod_allocator:\n";
+        for (size_t i = 0; i < arr.size(); ++i) {
+            std::cout << "Point[" << i << "] = {"
+                << arr[i].x << ", " << arr[i].y << "}\n";
         }
     }
 
